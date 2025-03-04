@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Чарівне відео та полотно для малювання</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Global resets */
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+    /* Utility class to hide elements */
+    .hidden {
+      display: none !important;
+    }
+    /* Main container is fixed so no extra scrolling occurs */
+    #mainContainer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      display: flex;
+      transition: transform 0.5s ease-in-out;
+      width: 200vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+    section {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+    /* Video view styling */
+    #videoSection {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    /* Responsive canvas filling its container */
+    #drawingCanvas {
+      background-color: #fff9e6;
+      background-image: repeating-linear-gradient(
+        45deg,
+        rgba(0,0,0,0.03) 0,
+        rgba(0,0,0,0.03) 1px,
+        transparent 1px,
+        transparent 5px
+      );
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+    /* Instrument panel */
+    #toolsPanel {
+      position: absolute;
+      z-index: 30;
+      background: rgba(255,255,255,0.8);
+      backdrop-filter: blur(5px);
+      padding: 0.5rem;
+      border-radius: 8px;
+      display: flex;
+      gap: 0.5rem;
+      bottom: 5vh;
+      left: 50%;
+      transform: translateX(-50%);
+      align-items: center;
+    }
+    /* Separate color panel (start hidden) */
+    #colorPanel {
+      position: absolute;
+      z-index: 35;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 0.25rem;
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 0.25rem;
+      /* Position above the instrument panel so it doesn't overlap the buttons */
+      bottom: calc(5vh + 5rem);
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    #colorPanel button {
+      width: 1.75rem;
+      height: 1.75rem;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      cursor: pointer;
+    }
+    /* Shapes panel */
+    #shapesPanel {
+      position: absolute;
+      z-index: 30;
+      background: rgba(255,255,255,0.8);
+      backdrop-filter: blur(5px);
+      padding: 0.5rem;
+      border-radius: 8px;
+      display: flex;
+      gap: 0.5rem;
+      bottom: 5vh;
+      right: 5vw;
+    }
+    /* Big circular buttons for page switching */
+    .pageSwitchButton {
+      position: absolute;
+      bottom: 5vh;
+      width: 4rem;
+      height: 4rem;
+      border-radius: 9999px;
+      background-color: #3b82f6;
+      color: white;
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      border: none;
+      cursor: pointer;
+      z-index: 40;
+    }
+    /* Positioning the page switch buttons */
+    #toCanvasButton {
+      right: 5vw;
+    }
+    #toVideoButton {
+      left: 5vw;
+    }
+  </style>
+</head>
+<body class="text-black">
+  <div id="mainContainer">
+    <!-- Video Section -->
+    <section id="videoSection">
+      <div class="w-full max-w-4xl p-4">
+        <div class="relative" style="padding-top:56.25%;">
+          <iframe id="ytPlayer" class="absolute top-0 left-0 w-full h-full rounded-lg shadow-xl"
+            src=""
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen>
+          </iframe>
+        </div>
+        <p class="mt-4 text-center text-lg">
+          Натисніть кнопку праворуч, щоб перейти до малювання
+        </p>
+      </div>
+      <!-- Button to go to the canvas section -->
+      <button id="toCanvasButton" class="pageSwitchButton">→</button>
+    </section>
+    <!-- Canvas Section -->
+    <section id="canvasSection">
+      <canvas id="drawingCanvas"></canvas>
+      <!-- Button to return to video -->
+      <button id="toVideoButton" class="pageSwitchButton">←</button>
+      <!-- Instrument Panel -->
+      <div id="toolsPanel">
+        <button id="penTool" title="Олівець" class="p-2 bg-blue-500 rounded hover:bg-blue-600">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-6 h-6">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.862 3.487a2.182 2.182 0 013.09 3.09L7.548 20.98H4v-3.548L16.862 3.487z" />
+          </svg>
+        </button>
+        <button id="eraserTool" title="Гумка" class="p-2 bg-red-500 rounded hover:bg-red-600">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-6 h-6">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.5 3.75L20.25 7.5a2.25 2.25 0 010 3.182l-10.5 10.5a2.25 2.25 0 01-3.182 0l-4.5-4.5a2.25 2.25 0 010-3.182l10.5-10.5a2.25 2.25 0 013.182 0z" />
+          </svg>
+        </button>
+        <div class="flex items-center gap-1">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-6 h-6">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12h16" />
+          </svg>
+          <input id="lineWidth" type="range" min="1" max="20" value="3" class="accent-green-500">
+        </div>
+        <!-- Toggle Color Panel Button -->
+        <button id="toggleColorPanel" title="Вибрати колір" class="p-2 bg-gray-300 rounded hover:bg-gray-400">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.4 15a2 2 0 010 2.8L16.6 21a2 2 0 01-2.8 0l-2-2m-4-4L4.6 9.6a2 2 0 010-2.8L7.4 4a2 2 0 012.8 0l2 2m4 4l2 2" />
+          </svg>
+        </button>
+        <button id="clearCanvas" title="Очистити" class="p-2 bg-gray-700 rounded hover:bg-gray-800">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-6 h-6">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 7h12M9 7v10m6-10v10M5 7l1-3h12l1 3" />
+          </svg>
+        </button>
+      </div>
+      <!-- Separate Color Panel - hidden by default -->
+      <div id="colorPanel" class="hidden">
+        <!-- 32 Colors in grid -->
+        <button data-color="#000000" style="background:#000000"></button>
+        <button data-color="#ffffff" style="background:#ffffff"></button>
+        <button data-color="#FF0000" style="background:#FF0000"></button>
+        <button data-color="#00FF00" style="background:#00FF00"></button>
+        <button data-color="#0000FF" style="background:#0000FF"></button>
+        <button data-color="#FFFF00" style="background:#FFFF00"></button>
+        <button data-color="#FF00FF" style="background:#FF00FF"></button>
+        <button data-color="#00FFFF" style="background:#00FFFF"></button>
+        <button data-color="#800000" style="background:#800000"></button>
+        <button data-color="#008000" style="background:#008000"></button>
+        <button data-color="#000080" style="background:#000080"></button>
+        <button data-color="#808000" style="background:#808000"></button>
+        <button data-color="#800080" style="background:#800080"></button>
+        <button data-color="#008080" style="background:#008080"></button>
+        <button data-color="#C0C0C0" style="background:#C0C0C0"></button>
+        <button data-color="#808080" style="background:#808080"></button>
+        <button data-color="#FFA500" style="background:#FFA500"></button>
+        <button data-color="#A52A2A" style="background:#A52A2A"></button>
+        <button data-color="#8A2BE2" style="background:#8A2BE2"></button>
+        <button data-color="#DEB887" style="background:#DEB887"></button>
+        <button data-color="#5F9EA0" style="background:#5F9EA0"></button>
+        <button data-color="#7FFF00" style="background:#7FFF00"></button>
+        <button data-color="#D2691E" style="background:#D2691E"></button>
+        <button data-color="#FF7F50" style="background:#FF7F50"></button>
+        <button data-color="#6495ED" style="background:#6495ED"></button>
+        <button data-color="#DC143C" style="background:#DC143C"></button>
+        <button data-color="#00CED1" style="background:#00CED1"></button>
+        <button data-color="#FFD700" style="background:#FFD700"></button>
+        <button data-color="#ADFF2F" style="background:#ADFF2F"></button>
+        <button data-color="#F08080" style="background:#F08080"></button>
+        <button data-color="#20B2AA" style="background:#20B2AA"></button>
+        <button data-color="#87CEFA" style="background:#87CEFA"></button>
+      </div>
+      <!-- Shapes Panel -->
+      <div id="shapesPanel">
+        <button data-shape="triangle" title="Трикутник" class="p-2 bg-purple-500 rounded hover:bg-purple-600">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-6 h-6">
+            <polygon points="50,15 90,85 10,85" fill="currentColor"/>
+          </svg>
+        </button>
+        <button data-shape="heart" title="Серце" class="p-2 bg-pink-500 rounded hover:bg-pink-600">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-6 h-6">
+            <path d="M50 80s-30-20-30-40a15 15 0 0130-5 15 15 0 0130 5c0 20-30 40-30 40z" fill="currentColor"/>
+          </svg>
+        </button>
+        <button data-shape="square" title="Квадрат" class="p-2 bg-indigo-500 rounded hover:bg-indigo-600">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-6 h-6">
+            <rect x="20" y="20" width="60" height="60" fill="currentColor"/>
+          </svg>
+        </button>
+        <button data-shape="circle" title="Коло" class="p-2 bg-yellow-500 rounded hover:bg-yellow-600">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-6 h-6">
+            <circle cx="50" cy="50" r="30" fill="currentColor"/>
+          </svg>
+        </button>
+        <button data-shape="flag" title="Прапор" class="p-2 bg-green-500 rounded hover:bg-green-600">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-6 h-6">
+            <path d="M20 20v60m0-60h40l-10 20 10 20h-40z" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      /* ========= Video Setup ========= */
+      const urlParams = new URLSearchParams(window.location.search);
+      const videoID = urlParams.get('v') || 'aAFjgd5G3fU';
+      document.getElementById("ytPlayer").src = `https://www.youtube.com/embed/${videoID}?enablejsapi=1`;
+
+      /* ========= Page Switching ========= */
+      const mainContainer = document.getElementById("mainContainer");
+      let currentView = 0; // 0: video, 1: canvas
+      function showView(viewIndex) {
+        currentView = viewIndex;
+        mainContainer.style.transform = `translateX(-${viewIndex * 100}vw)`;
+      }
+      document.getElementById("toCanvasButton").addEventListener("click", () => showView(1));
+      document.getElementById("toVideoButton").addEventListener("click", () => showView(0));
+
+      /* ========= Canvas & Drawing ========= */
+      const canvas = document.getElementById("drawingCanvas");
+      const ctx = canvas.getContext("2d");
+
+      // Drawing state variables
+      let currentMode = "freehand";
+      let currentShapeType = null;
+      let currentColor = "#000000";
+      let lineWidth = parseInt(document.getElementById("lineWidth").value, 10);
+      let drawing = false;
+      let shapes = [];
+      let creatingShape = null;
+      let activeShape = null;
+      let dragOffset = { x: 0, y: 0 };
+      let resizingHandle = null;
+      let longPressTimer = null;
+      const longPressDuration = 600; // ms
+
+      // Normalize shape dimensions during drawing to prevent negative values
+      function drawShapeObject(shape) {
+        let nx = shape.x, ny = shape.y, nw = shape.width, nh = shape.height;
+        if(nw < 0){ nx += nw; nw = -nw; }
+        if(nh < 0){ ny += nh; nh = -nh; }
+        
+        ctx.save();
+        ctx.fillStyle = shape.color;
+        ctx.strokeStyle = shape.color;
+        ctx.lineWidth = 2;
+        switch (shape.type) {
+          case "triangle":
+            ctx.beginPath();
+            ctx.moveTo(nx + nw/2, ny);
+            ctx.lineTo(nx, ny + nh);
+            ctx.lineTo(nx + nw, ny + nh);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            break;
+          case "square":
+            ctx.beginPath();
+            ctx.rect(nx, ny, nw, nh);
+            ctx.fill();
+            ctx.stroke();
+            break;
+          case "circle":
+            ctx.beginPath();
+            let radius = Math.min(nw, nh) / 2;
+            ctx.arc(nx + nw/2, ny + nh/2, radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            break;
+          case "heart":
+            ctx.beginPath();
+            ctx.moveTo(nx + nw/2, ny + nh);
+            ctx.bezierCurveTo(nx + nw, ny + nh*0.7, nx + nw, ny + nh*0.3, nx + nw/2, ny + nh*0.3);
+            ctx.bezierCurveTo(nx, ny + nh*0.3, nx, ny + nh*0.7, nx + nw/2, ny + nh);
+            ctx.fill();
+            ctx.stroke();
+            break;
+          case "flag":
+            ctx.beginPath();
+            ctx.moveTo(nx, ny);
+            ctx.lineTo(nx, ny + nh);
+            ctx.moveTo(nx, ny);
+            ctx.lineTo(nx + nw, ny + nh/2);
+            ctx.lineTo(nx, ny + nh);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            break;
+        }
+        if (shape.selected) {
+          const handleSize = 10;
+          ctx.fillStyle = "black";
+          ctx.fillRect(nx - handleSize/2, ny - handleSize/2, handleSize, handleSize);
+          ctx.fillRect(nx + nw - handleSize/2, ny - handleSize/2, handleSize, handleSize);
+          ctx.fillRect(nx - handleSize/2, ny + nh - handleSize/2, handleSize, handleSize);
+          ctx.fillRect(nx + nw - handleSize/2, ny + nh - handleSize/2, handleSize, handleSize);
+        }
+        ctx.restore();
+      }
+
+      function redraw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (currentMode === "freehand") return;
+        shapes.forEach(s => drawShapeObject(s));
+        if (creatingShape) drawShapeObject(creatingShape);
+      }
+      function resizeCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = window.innerWidth * dpr;
+        canvas.height = window.innerHeight * dpr;
+        canvas.style.width = window.innerWidth + 'px';
+        canvas.style.height = window.innerHeight + 'px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        redraw();
+      }
+      window.addEventListener("resize", resizeCanvas);
+      resizeCanvas();
+
+      /* ========= Tool Panel ========= */
+      document.getElementById("penTool").addEventListener("click", () => {
+        currentMode = "freehand";
+        currentShapeType = null;
+        currentColor = "#000000";
+        document.getElementById("penTool").style.background = "#000000";
+      });
+      document.getElementById("eraserTool").addEventListener("click", () => {
+        currentMode = "freehand";
+        currentShapeType = null;
+        currentColor = "#fff9e6";
+        document.getElementById("penTool").style.background = "#fff9e6";
+      });
+      document.getElementById("lineWidth").addEventListener("input", (e) => {
+        lineWidth = parseInt(e.target.value, 10);
+      });
+      document.getElementById("clearCanvas").addEventListener("click", () => {
+        if (currentMode === "freehand") {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        } else {
+          shapes = [];
+          redraw();
+        }
+      });
+      document.querySelectorAll("#shapesPanel [data-shape]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          currentMode = "shape";
+          currentShapeType = btn.getAttribute("data-shape");
+        });
+      });
+
+      /* ========= Color Panel Logic ========= */
+      const colorPanel = document.getElementById("colorPanel");
+      // Toggle the color panel when clicking the new icon button in the tool panel
+      document.getElementById("toggleColorPanel").addEventListener("click", (e) => {
+        e.stopPropagation();
+        colorPanel.classList.toggle("hidden");
+      });
+      // When a color is chosen, update the global color, update the pen tool background and slider accent, and hide the panel
+      document.querySelectorAll("#colorPanel button").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const selectedColor = btn.getAttribute("data-color");
+          currentColor = selectedColor;
+          document.getElementById("penTool").style.background = selectedColor;
+          document.getElementById("lineWidth").style.accentColor = selectedColor;
+          colorPanel.classList.add("hidden");
+        });
+      });
+
+      /* ========= Shape Drawing Functions ========= */
+      function getCanvasPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      }
+      function getShapeAt(x, y) {
+        for (let i = shapes.length - 1; i >= 0; i--) {
+          let s = shapes[i];
+          if (x >= s.x && x <= s.x + s.width && y >= s.y && y <= s.y + s.height) {
+            return s;
+          }
+        }
+        return null;
+      }
+      function getHandleAt(shape, x, y) {
+        const handleSize = 10;
+        const handles = {
+          tl: { x: shape.x - handleSize/2, y: shape.y - handleSize/2 },
+          tr: { x: shape.x + shape.width - handleSize/2, y: shape.y - handleSize/2 },
+          bl: { x: shape.x - handleSize/2, y: shape.y + shape.height - handleSize/2 },
+          br: { x: shape.x + shape.width - handleSize/2, y: shape.y + shape.height - handleSize/2 }
+        };
+        for (let key in handles) {
+          let hx = handles[key].x, hy = handles[key].y;
+          if (x >= hx && x <= hx + handleSize && y >= hy && y <= hy + handleSize) {
+            return key;
+          }
+        }
+        return null;
+      }
+
+      /* ========= Canvas Event Handling ========= */
+      canvas.addEventListener("pointerdown", (e) => {
+        const pos = getCanvasPos(e);
+        const downTime = Date.now();
+        if (currentMode === "freehand") {
+          drawing = true;
+          ctx.beginPath();
+          ctx.moveTo(pos.x, pos.y);
+          return;
+        }
+        let hitShape = getShapeAt(pos.x, pos.y);
+        if (hitShape) {
+          activeShape = hitShape;
+          dragOffset.x = pos.x - hitShape.x;
+          dragOffset.y = pos.y - hitShape.y;
+          longPressTimer = setTimeout(() => {
+            activeShape.selected = true;
+            redraw();
+          }, longPressDuration);
+          let handle = getHandleAt(hitShape, pos.x, pos.y);
+          if (handle) { resizingHandle = handle; }
+          return;
+        }
+        if (currentShapeType) {
+          creatingShape = {
+            type: currentShapeType,
+            x: pos.x,
+            y: pos.y,
+            width: 0,
+            height: 0,
+            color: currentColor,
+            selected: false
+          };
+        }
+      });
+      canvas.addEventListener("pointermove", (e) => {
+        const pos = getCanvasPos(e);
+        if (currentMode === "freehand" && drawing) {
+          ctx.lineTo(pos.x, pos.y);
+          ctx.strokeStyle = currentColor;
+          ctx.lineWidth = lineWidth;
+          ctx.stroke();
+          return;
+        }
+        if (creatingShape) {
+          creatingShape.width = pos.x - creatingShape.x;
+          creatingShape.height = pos.y - creatingShape.y;
+          redraw();
+          return;
+        }
+        if (activeShape && !resizingHandle) {
+          if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+          activeShape.x = pos.x - dragOffset.x;
+          activeShape.y = pos.y - dragOffset.y;
+          redraw();
+          return;
+        }
+        if (activeShape && resizingHandle) {
+          let newWidth, newHeight;
+          switch (resizingHandle) {
+            case "tl":
+              newWidth = (activeShape.x + activeShape.width) - pos.x;
+              newHeight = (activeShape.y + activeShape.height) - pos.y;
+              activeShape.x = pos.x;
+              activeShape.y = pos.y;
+              activeShape.width = newWidth;
+              activeShape.height = newHeight;
+              break;
+            case "tr":
+              newWidth = pos.x - activeShape.x;
+              newHeight = (activeShape.y + activeShape.height) - pos.y;
+              activeShape.y = pos.y;
+              activeShape.width = newWidth;
+              activeShape.height = newHeight;
+              break;
+            case "bl":
+              newWidth = (activeShape.x + activeShape.width) - pos.x;
+              newHeight = pos.y - activeShape.y;
+              activeShape.x = pos.x;
+              activeShape.width = newWidth;
+              activeShape.height = newHeight;
+              break;
+            case "br":
+              activeShape.width = pos.x - activeShape.x;
+              activeShape.height = pos.y - activeShape.y;
+              break;
+          }
+          redraw();
+        }
+      });
+      canvas.addEventListener("pointerup", (e) => {
+        const pos = getCanvasPos(e);
+        if (currentMode === "freehand" && drawing) {
+          drawing = false;
+          return;
+        }
+        if (creatingShape) {
+          creatingShape.width = pos.x - creatingShape.x;
+          creatingShape.height = pos.y - creatingShape.y;
+          shapes.push(creatingShape);
+          creatingShape = null;
+          redraw();
+        }
+        activeShape = null;
+        if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+        resizingHandle = null;
+      });
+      canvas.addEventListener("pointercancel", (e) => {
+        drawing = false;
+        activeShape = null;
+        creatingShape = null;
+        if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+        resizingHandle = null;
+      });
+    });
+  </script>
+</body>
+</html>
