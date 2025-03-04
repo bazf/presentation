@@ -38,11 +38,15 @@
   <div id="iframeContainer" class="hidden absolute inset-0 bg-white">
     <iframe id="appFrame" class="w-full h-full" frameborder="0"></iframe>
     <button id="backButton" class="absolute top-4 left-4 px-4 py-2 bg-gray-900 text-white rounded-full shadow-lg hover:bg-gray-800 transition">
-      Х
+      Назад
     </button>
   </div>
 
   <script>
+    // Get the video parameter from the landing page URL (if any)
+    const urlParams = new URLSearchParams(window.location.search);
+    const videoParam = urlParams.get("video");
+
     const landingPage = document.getElementById('landingPage');
     const iframeContainer = document.getElementById('iframeContainer');
     const appFrame = document.getElementById('appFrame');
@@ -57,7 +61,12 @@
     });
 
     buttonCanvas.addEventListener('click', () => {
-      appFrame.src = 'canvas.html';
+      // Build the URL for canvas.html. If a video parameter exists, pass it as "v"
+      let canvasURL = 'canvas.html';
+      if (videoParam) {
+        canvasURL += '?v=' + encodeURIComponent(videoParam);
+      }
+      appFrame.src = canvasURL;
       landingPage.classList.add('hidden');
       iframeContainer.classList.remove('hidden');
     });
