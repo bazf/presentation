@@ -55,14 +55,14 @@
     const backButton = document.getElementById('backButton');
 
     buttonPresentation.addEventListener('click', () => {
-      appFrame.src = 'presentation.html';
+      appFrame.src = 'apps/presentation/index.html';
       landingPage.classList.add('hidden');
       iframeContainer.classList.remove('hidden');
     });
 
     buttonCanvas.addEventListener('click', () => {
-      // Build the URL for canvas.html. If a video parameter exists, pass it as "v"
-      let canvasURL = 'canvas.html';
+      // Build the URL for canvas app. If a video parameter exists, pass it as "v"
+      let canvasURL = 'apps/canvas/index.html';
       if (videoParam) {
         canvasURL += '?v=' + encodeURIComponent(videoParam);
       }
