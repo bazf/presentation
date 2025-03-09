@@ -71,6 +71,11 @@
     const API_KEY_STORAGE_KEY = 'gemini_api_key';
     const API_KEY_EXPIRY_KEY = 'gemini_api_key_expiry';
 
+    // Hide clear storage button if API key is provided via query parameter
+    if (geminiApiKey) {
+      document.getElementById('clearStorageBtn').classList.add('hidden');
+    }
+
     // Check if we have a valid API key in local storage
     function getStoredApiKey() {
       const apiKey = localStorage.getItem(API_KEY_STORAGE_KEY);
@@ -89,11 +94,6 @@
       const oneWeekFromNow = new Date().getTime() + (7 * 24 * 60 * 60 * 1000);
       localStorage.setItem(API_KEY_STORAGE_KEY, apiKey);
       localStorage.setItem(API_KEY_EXPIRY_KEY, oneWeekFromNow.toString());
-    }
-
-    // If API key is provided in URL, save it
-    if (geminiApiKey) {
-      storeApiKey(geminiApiKey);
     }
 
     const landingPage = document.getElementById('landingPage');
@@ -127,7 +127,9 @@
     });
 
     buttonCraftTale.addEventListener('click', () => {
-      const storedApiKey = getStoredApiKey() || geminiApiKey;
+      // If API key is provided via URL parameter, use it directly without storing
+      // Otherwise check if we have a stored key
+      const storedApiKey = geminiApiKey || getStoredApiKey();
 
       if (storedApiKey) {
         // We have a valid API key, proceed to craft tale app
