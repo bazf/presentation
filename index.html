@@ -20,6 +20,19 @@
   </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-gray-100 to-white text-gray-900 relative">
+  <!-- API Key Modal -->
+  <div id="apiKeyModal" class="hidden fixed inset-0 z-50 bg-black bg-opacity-70 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+      <h2 class="text-2xl font-bold mb-4 text-gray-800">Введіть Gemini API ключ</h2>
+      <p class="mb-4 text-gray-600">Для роботи додатку "Створи казку" потрібен ключ API. Він буде збережений лише на вашому пристрої протягом тижня.</p>
+      <input type="text" id="apiKeyInput" class="w-full px-4 py-2 border border-gray-300 rounded mb-4" placeholder="Введіть ваш API ключ">
+      <div class="flex justify-end space-x-3">
+        <button id="cancelApiKey" class="px-4 py-2 text-gray-700 hover:text-gray-900">Скасувати</button>
+        <button id="saveApiKey" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Зберегти</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Landing Page Content -->
   <div id="landingPage" class="flex flex-col items-center justify-center h-screen text-center p-8">
     <h1 class="text-4xl md:text-6xl font-bold drop-shadow-lg mb-8">Ласкаво просимо у казкову зону Оксани Богданівни</h1>
@@ -30,6 +43,9 @@
       </button>
       <button id="buttonCanvas" class="block w-64 mx-auto px-6 py-4 bg-white text-gray-900 rounded-full font-semibold shadow-lg transform hover:scale-105 transition duration-300">
         Державні символи
+      </button>
+      <button id="buttonCraftTale" class="block w-64 mx-auto px-6 py-4 bg-white text-gray-900 rounded-full font-semibold shadow-lg transform hover:scale-105 transition duration-300">
+        Створи казку
       </button>
     </div>
   </div>
@@ -43,16 +59,51 @@
   </div>
 
   <script>
-    // Get the video parameter from the landing page URL (if any)
+    // Get the parameters from the landing page URL
     const urlParams = new URLSearchParams(window.location.search);
     const videoParam = urlParams.get("video");
+    const geminiApiKey = urlParams.get("apiKey");
+
+    // API Key management
+    const API_KEY_STORAGE_KEY = 'gemini_api_key';
+    const API_KEY_EXPIRY_KEY = 'gemini_api_key_expiry';
+
+    // Check if we have a valid API key in local storage
+    function getStoredApiKey() {
+      const apiKey = localStorage.getItem(API_KEY_STORAGE_KEY);
+      const expiryTimestamp = localStorage.getItem(API_KEY_EXPIRY_KEY);
+      const now = new Date().getTime();
+
+      if (apiKey && expiryTimestamp && now < parseInt(expiryTimestamp)) {
+        return apiKey;
+      }
+
+      return null;
+    }
+
+    // Save API key to local storage with one week expiration
+    function storeApiKey(apiKey) {
+      const oneWeekFromNow = new Date().getTime() + (7 * 24 * 60 * 60 * 1000);
+      localStorage.setItem(API_KEY_STORAGE_KEY, apiKey);
+      localStorage.setItem(API_KEY_EXPIRY_KEY, oneWeekFromNow.toString());
+    }
+
+    // If API key is provided in URL, save it
+    if (geminiApiKey) {
+      storeApiKey(geminiApiKey);
+    }
 
     const landingPage = document.getElementById('landingPage');
     const iframeContainer = document.getElementById('iframeContainer');
     const appFrame = document.getElementById('appFrame');
     const buttonPresentation = document.getElementById('buttonPresentation');
     const buttonCanvas = document.getElementById('buttonCanvas');
+    const buttonCraftTale = document.getElementById('buttonCraftTale');
     const backButton = document.getElementById('backButton');
+    const apiKeyModal = document.getElementById('apiKeyModal');
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    const saveApiKey = document.getElementById('saveApiKey');
+    const cancelApiKey = document.getElementById('cancelApiKey');
 
     buttonPresentation.addEventListener('click', () => {
       appFrame.src = 'apps/presentation/index.html';
@@ -71,10 +122,51 @@
       iframeContainer.classList.remove('hidden');
     });
 
+    buttonCraftTale.addEventListener('click', () => {
+      const storedApiKey = getStoredApiKey() || geminiApiKey;
+
+      if (storedApiKey) {
+        // We have a valid API key, proceed to craft tale app
+        const craftTaleURL = `apps/craft-tale/index.html?apiKey=${encodeURIComponent(storedApiKey)}`;
+        appFrame.src = craftTaleURL;
+        landingPage.classList.add('hidden');
+        iframeContainer.classList.remove('hidden');
+      } else {
+        // Show the API key modal
+        apiKeyModal.classList.remove('hidden');
+      }
+    });
+
     backButton.addEventListener('click', () => {
       appFrame.src = '';
       iframeContainer.classList.add('hidden');
       landingPage.classList.remove('hidden');
+    });
+
+    // API Key modal handlers
+    saveApiKey.addEventListener('click', () => {
+      const key = apiKeyInput.value.trim();
+      if (key) {
+        storeApiKey(key);
+        apiKeyModal.classList.add('hidden');
+
+        // Now that we have the key, proceed to the app
+        const craftTaleURL = `apps/craft-tale/index.html?apiKey=${encodeURIComponent(key)}`;
+        appFrame.src = craftTaleURL;
+        landingPage.classList.add('hidden');
+        iframeContainer.classList.remove('hidden');
+      }
+    });
+
+    cancelApiKey.addEventListener('click', () => {
+      apiKeyModal.classList.add('hidden');
+    });
+
+    // Handle Enter key in input
+    apiKeyInput.addEventListener('keyup', (e) => {
+      if (e.key === 'Enter') {
+        saveApiKey.click();
+      }
     });
   </script>
 </body>

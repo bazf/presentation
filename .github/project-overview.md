@@ -11,6 +11,7 @@ This repository contains applications designed for kindergarten teachers.
 - All new applications should maintain the same style as existing apps
 - Tailwind CSS should be used for styling
 - UI/UX should be responsive across different screen sizes, from mobile devices to large interactive boards
+- UI text always should be in Ukrainina language
 - Applications should support both multi-touch interactions and traditional desktop keyboard/mouse experience
 
 ## Hosting
