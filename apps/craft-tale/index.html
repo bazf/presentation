@@ -354,6 +354,51 @@ Once the questioning phase is complete, generate a **beautifully written fairy t
 - Ensure the final story is **enchanting, beautifully written, and full of child-friendly magic**.
 - The story must be written **entirely in Ukrainian**.`;
 
+      // System instruction for the thinking model to enhance stories
+      const thinkingModelInstruction = `# **Fairy Tale Enhancement System**
+
+You are an advanced literary enhancement system specialized in improving children's fairy tales. Your role is to analyze a provided fairy tale and create detailed enhancement suggestions to make it more vivid, descriptive, and engaging.
+
+## **Process**
+1. **Analyze the provided fairy tale** - Identify its structure, characters, settings, and plot points.
+2. **Develop enhancement suggestions** focusing on:
+   - More detailed character descriptions
+   - Richer setting visualization
+   - Smoother scene transitions
+   - More vivid sensory details
+   - Enhanced dialogue with proper Ukrainian speech patterns
+   - Age-appropriate literary techniques
+   - Cultural relevance to Ukrainian traditions and folklore
+
+## **Enhancement Guidelines**
+For each scene or section of the story:
+1. **Describe what's already strong** about this section
+2. **Suggest specific improvements** with examples
+3. **Provide detailed guidance** on how to enhance:
+   - Visual descriptions
+   - Character emotions and reactions
+   - Setting details
+   - Action sequences
+   - Dialogue
+   - Literary devices appropriate for children
+
+## **Output Format**
+Your response should be a detailed enhancement plan that includes:
+
+1. **Story Overview**: Brief analysis of the original story's strengths and areas for improvement
+2. **Scene-by-Scene Enhancements**: Specific suggestions for each major scene with examples
+3. **Final Enhancement Prompt**: A comprehensive prompt that can be sent back to the original model to generate the enhanced version
+
+The final enhancement prompt should be clearly marked and should instruct the model to:
+- Maintain the original storyline and characters
+- Incorporate all enhancement suggestions
+- Keep the story appropriate for children ages 4-6
+- Ensure the story remains in Ukrainian
+- Preserve any moral lessons from the original story
+- Make the language more vibrant and engaging
+
+Your enhancement suggestions should be rich, specific, and detailed, providing clear direction on how to transform a basic fairy tale into a masterpiece of children's literature.`;
+
       // Helper for creating message elements
       function createMessageElement(role, text) {
         const messageDiv = document.createElement('div');
@@ -390,7 +435,7 @@ Once the questioning phase is complete, generate a **beautifully written fairy t
       }
 
       // Function to send message to Gemini API
-      async function sendMessageToGemini(userMessage) {
+      async function sendMessageToGemini(userMessage, modelName = "gemini-2.0-flash") {
         try {
           showLoading(true);
 
@@ -406,7 +451,11 @@ Once the questioning phase is complete, generate a **beautifully written fairy t
             parts: [{ text: userMessage }]
           });
 
-          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+          // Select appropriate system instruction based on the model
+          const currentInstruction = modelName.includes("thinking") ?
+            thinkingModelInstruction : systemInstruction;
+
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -415,7 +464,7 @@ Once the questioning phase is complete, generate a **beautifully written fairy t
               contents: apiConversation,
               systemInstruction: {
                 role: 'user',
-                parts: [{ text: systemInstruction }]
+                parts: [{ text: currentInstruction }]
               },
               generationConfig: {
                 temperature: 1,
@@ -440,23 +489,60 @@ Once the questioning phase is complete, generate a **beautifully written fairy t
 
           const aiMessage = data.candidates[0].content.parts[0].text;
 
-          // Update conversation history
-          conversationHistory.push({
-            role: 'user',
-            text: userMessage
-          });
+          // Only update conversation history if this is not a thinking model call
+          if (!modelName.includes("thinking")) {
+            // Update conversation history
+            conversationHistory.push({
+              role: 'user',
+              text: userMessage
+            });
 
-          conversationHistory.push({
-            role: 'model',
-            text: aiMessage
-          });
+            conversationHistory.push({
+              role: 'model',
+              text: aiMessage
+            });
+          }
 
           return aiMessage;
 
         } catch (error) {
-          console.error('Error sending message to Gemini API:', error);
+          console.error(`Error sending message to ${modelName} API:`, error);
           alert(`Помилка: ${error.message}`);
           return null;
+        } finally {
+          showLoading(false);
+        }
+      }
+
+      // Function to send a story to the thinking model for enhancement
+      async function enhanceStoryWithThinkingModel(originalStory) {
+        try {
+          console.log("Enhancing story with thinking model...");
+          showLoading(true);
+
+          // Create a prompt for the thinking model
+          const enhancementRequest = `Будь ласка, проаналізуй та покращ цю казку, зроби її більш детальною, описовою та захопливою для дітей віком 4-6 років:\n\n${originalStory}`;
+
+          // Send to thinking model
+          const enhancementSuggestions = await sendMessageToGemini(enhancementRequest, "gemini-2.0-flash-thinking-exp-01-21");
+
+          if (!enhancementSuggestions) {
+            throw new Error("Не вдалося отримати рекомендації з thinking моделі");
+          }
+
+          // Create a prompt for the final enhanced story
+          const finalEnhancementPrompt = `Ось оригінальна казка:\n\n${originalStory}\n\nОсь рекомендації щодо її покращення:\n\n${enhancementSuggestions}\n\nТепер, будь ласка, створи покращену версію казки, яка враховує всі ці рекомендації. Казка має залишатися українською мовою та бути придатною для дітей 4-6 років. Розширюй опис сцен, додай більше деталей про персонажів, їхні емоції та дії, зроби переходи між сценами плавнішими, а мову казки - яскравішою та захопливішою. Подавай лише текст кінцевої покращеної казки без додаткових пояснень.`;
+
+          // Send to regular model for final enhanced story
+          const enhancedStory = await sendMessageToGemini(finalEnhancementPrompt);
+
+          console.log("Story enhancement complete!");
+          return enhancedStory;
+
+        } catch (error) {
+          console.error("Error enhancing story:", error);
+          // If enhancement fails, return the original story
+          return originalStory;
         } finally {
           showLoading(false);
         }
@@ -551,15 +637,22 @@ Once the questioning phase is complete, generate a **beautifully written fairy t
           // Add a final prompt to generate the story
           const finalPrompt = "Дякую за відповіді! Будь ласка, створи зараз повну казку на основі наших відповідей. Напиши лише саму казку, без додаткових коментарів чи пояснень. Казка має бути українською мовою, з гарною структурою і цікавими літературними прийомами. Очікую на чудову казку!";
 
-          const finalStoryResponse = await sendMessageToGemini(finalPrompt);
+          const initialStoryResponse = await sendMessageToGemini(finalPrompt);
 
-          if (finalStoryResponse) {
+          if (initialStoryResponse) {
+            // Show loading indicator during enhancement
+            showLoading(true);
+
+            // Use the thinking model to enhance the story
+            console.log("Initial story created, now enhancing...");
+            const enhancedStory = await enhanceStoryWithThinkingModel(initialStoryResponse);
+
             // Hide interaction section and show final story
             interactionSection.classList.add('hidden');
             finalStory.classList.remove('hidden');
 
-            // Format and display the story
-            storyContent.innerHTML = finalStoryResponse
+            // Format and display the enhanced story
+            storyContent.innerHTML = enhancedStory
               .split('\n')
               .map(line => line.trim() ? `<p>${line}</p>` : '<br>')
               .join('');
