@@ -47,6 +47,9 @@
       <button id="buttonCraftTale" class="block w-64 mx-auto px-6 py-4 bg-white text-gray-900 rounded-full font-semibold shadow-lg transform hover:scale-105 transition duration-300">
         Створи казку
       </button>
+      <button id="clearStorageBtn" class="block w-64 mx-auto px-6 py-4 bg-red-100 text-red-700 rounded-full font-semibold shadow-lg transform hover:scale-105 transition duration-300">
+        Очистити ключі
+      </button>
     </div>
   </div>
 
@@ -62,7 +65,7 @@
     // Get the parameters from the landing page URL
     const urlParams = new URLSearchParams(window.location.search);
     const videoParam = urlParams.get("video");
-    const geminiApiKey = urlParams.get("apiKey");
+    const geminiApiKey = urlParams.get("apiKeyTest");
 
     // API Key management
     const API_KEY_STORAGE_KEY = 'gemini_api_key';
@@ -104,6 +107,7 @@
     const apiKeyInput = document.getElementById('apiKeyInput');
     const saveApiKey = document.getElementById('saveApiKey');
     const cancelApiKey = document.getElementById('cancelApiKey');
+    const clearStorageBtn = document.getElementById('clearStorageBtn');
 
     buttonPresentation.addEventListener('click', () => {
       appFrame.src = 'apps/presentation/index.html';
@@ -141,6 +145,15 @@
       appFrame.src = '';
       iframeContainer.classList.add('hidden');
       landingPage.classList.remove('hidden');
+    });
+
+    // Clear local storage and refresh page
+    clearStorageBtn.addEventListener('click', () => {
+      if (confirm('Це видалить збережений ключ API. Ви впевнені?')) {
+        localStorage.removeItem(API_KEY_STORAGE_KEY);
+        localStorage.removeItem(API_KEY_EXPIRY_KEY);
+        window.location.reload();
+      }
     });
 
     // API Key modal handlers
